@@ -94,13 +94,14 @@ if __name__ == "__main__":
             model.update_target_network()
 
             total_loss += loss.item()
+            batch_counter += 1
 
-        # Check for collapse once per epoch
-        if batch_counter % 30 == 0:
-            with torch.no_grad():
-                mean_var = check_for_collapse(pred_encs)
-            avg_loss = total_loss / len(train_loader)
-            print(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}")
+            # Check for collapse once per epoch
+            if batch_counter % 30 == 0:
+                with torch.no_grad():
+                    mean_var = check_for_collapse(pred_encs)
+                avg_loss = total_loss / len(train_loader)
+                print(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}")
 
         # Save model every 5 epochs
         if (epoch + 1) % 5 == 0:
