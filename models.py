@@ -53,7 +53,6 @@ class Projection(nn.Module):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(emb_dim, emb_dim),
-            nn.BatchNorm1d(emb_dim),
             nn.ReLU(),
             nn.Linear(emb_dim, emb_dim),
             nn.ReLU(),
