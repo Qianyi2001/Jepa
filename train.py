@@ -96,7 +96,7 @@ if __name__ == "__main__":
             total_loss += loss.item()
 
         # Check for collapse once per epoch
-        if batch_counter % 100 == 0:
+        if batch_counter % 30 == 0:
             with torch.no_grad():
                 mean_var = check_for_collapse(pred_encs)
             avg_loss = total_loss / len(train_loader)
