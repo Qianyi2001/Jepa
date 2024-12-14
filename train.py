@@ -102,8 +102,7 @@ if __name__ == "__main__":
                     mean_var = check_for_collapse(pred_encs)
                 print(f"Epoch {epoch + 1}, Loss: {total_loss:.4f}")
 
-        # Save model every 5 epochs
-        if (epoch + 1) % 5 == 0:
-            save_path = f"checkpoints/epoch_{epoch+1}_jepa.pth"
-            torch.save(model.state_dict(), save_path)
-            print(f"Model checkpoint saved at {save_path}")
+        # Save model every 1 epochs
+        save_path = f"checkpoints/epoch_{epoch}_jepa.pth"
+        torch.save(model.state_dict(), save_path)
+        print(f"Model checkpoint saved at {save_path}")
