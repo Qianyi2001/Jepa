@@ -23,7 +23,7 @@ def check_for_collapse(embeddings: torch.Tensor, eps: float = 1e-8):
 if __name__ == "__main__":
     data_path = "/scratch/DL24FA/train"  # Adjust
     batch_size = 64
-    lr = 3e-4
+    lr = 1e-4
     epochs = 20
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     os.makedirs("checkpoints", exist_ok=True)
@@ -100,8 +100,7 @@ if __name__ == "__main__":
             if batch_counter % 30 == 0:
                 with torch.no_grad():
                     mean_var = check_for_collapse(pred_encs)
-                avg_loss = total_loss / len(train_loader)
-                print(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}")
+                print(f"Epoch {epoch + 1}, Loss: {total_loss:.4f}")
 
         # Save model every 5 epochs
         if (epoch + 1) % 5 == 0:
