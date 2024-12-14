@@ -21,7 +21,7 @@ def check_for_collapse(embeddings: torch.Tensor, eps: float = 1e-8):
     return mean_var
 
 if __name__ == "__main__":
-    data_path = "DL24FA/train"  # Adjust
+    data_path = "/scratch/DL24FA/train"  # Adjust
     batch_size = 64
     lr = 3e-4
     epochs = 20
