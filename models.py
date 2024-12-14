@@ -54,7 +54,7 @@ class Encoder(nn.Module):
 class TransitionModel(nn.Module):
     def __init__(self, state_dim=128, action_dim=2, hidden_dim=512):
         super().__init__()
-        self.gru = nn.GRU(input_size=state_dim + action_dim, hidden_size=hidden_dim, batch_first=True)
+        self.gru = nn.GRU(input_size=state_dim * 2 + action_dim, hidden_size=hidden_dim, batch_first=True)
         self.fc = nn.Linear(hidden_dim, state_dim)
 
     def forward(self, prev_embed, curr_embed, action):
