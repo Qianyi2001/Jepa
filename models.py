@@ -64,23 +64,39 @@ class TransitionModel(nn.Module):
 
 # Enhanced Projection with Attention
 class Projection(nn.Module):
-    def __init__(self, emb_dim=128, proj_dim=128, num_heads=4):
+    def __init__(self, emb_dim=128, proj_dim=128, num_heads=4, dropout=0.1):
         super().__init__()
-        self.fc = nn.Sequential(
+        # 预处理层
+        self.pre_norm = nn.LayerNorm(emb_dim)
+
+        # 自注意力层
+        self.attention = nn.MultiheadAttention(
+            embed_dim=emb_dim,
+            num_heads=num_heads,
+            dropout=dropout,
+            batch_first=True
+        )
+
+        self.projection = nn.Sequential(
             nn.Linear(emb_dim, emb_dim),
-            nn.BatchNorm1d(emb_dim),
-            nn.ReLU(),
-            nn.MultiheadAttention(embed_dim=emb_dim, num_heads=num_heads, batch_first=True),
+            nn.ReLU(inplace=True),
+            nn.Dropout(dropout),
             nn.Linear(emb_dim, proj_dim),
-            nn.BatchNorm1d(proj_dim),
-            nn.ReLU()
+            nn.LayerNorm(proj_dim)
         )
 
     def forward(self, x):
-        B, T, D = x.shape
-        x = x.view(-1, D)
-        x = self.fc(x)
-        return x.view(B, T, -1)
+        x_norm = self.pre_norm(x)
+        attn_output, _ = self.attention(
+            x_norm, x_norm, x_norm,
+            need_weights=False  # 不需要注意力权重
+        )
+        x = x + attn_output
+
+        # 投影
+        proj_output = self.projection(x)
+
+        return proj_output
 
 class Predictor(nn.Module):
     def __init__(self, emb_dim=128, hidden_dim=512):
