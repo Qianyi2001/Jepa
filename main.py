@@ -41,13 +41,17 @@ def load_data(device):
     return probe_train_ds, probe_val_ds
 
 
-def load_model(model_path):
+def load_model():
     """Load or initialize the JEPA model and weights."""
     # Use the same parameters as during training
-    model = RecurrentJEPA(state_dim=128, action_dim=2, hidden_dim=128, ema_rate=0.99)
-    state_dict = torch.load("checkpoints/epoch_10_jepa.pth", map_location="cuda")
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = RecurrentJEPA(state_dim=128, action_dim=2, hidden_dim=128, ema_rate=0.99).to(device)
+
+    model_path = "checkpoints/epoch_1_jepa.pth"
+    state_dict = torch.load(model_path, map_location=device)
     model.load_state_dict(state_dict)
     model.to("cuda")
+
     model.eval()
     return model
 
@@ -70,12 +74,9 @@ def evaluate_model(device, model, probe_train_ds, probe_val_ds):
 
 
 if __name__ == "__main__":
-    checkpoints = "checkpoints"
+
     device = get_device()
-    for cp in glob.glob(f"{checkpoints}/*.pth"):
-        model = load_model(cp)
-        probe_train_ds, probe_val_ds = load_data(device)
-        evaluate_model(device, model, probe_train_ds, probe_val_ds)
-    # probe_train_ds, probe_val_ds = load_data(device)
-    # model = load_model()
-    # evaluate_model(device, model, probe_train_ds, probe_val_ds)
+    probe_train_ds, probe_val_ds = load_data(device)
+    model = load_model()
+    evaluate_model(device, model, probe_train_ds, probe_val_ds)
+
