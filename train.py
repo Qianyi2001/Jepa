@@ -39,6 +39,7 @@ if __name__ == "__main__":
     model = RecurrentJEPA(state_dim=128, action_dim=2, proj_dim=128, hidden_dim=256, ema_rate=0.99, device=device)
     optimizer = optim.AdamW(model.parameters(), lr=lr)
 
+    batch_counter = 0
     for epoch in range(epochs):
         model.train()
         total_loss = 0.0
@@ -94,12 +95,12 @@ if __name__ == "__main__":
 
             total_loss += loss.item()
 
-        avg_loss = total_loss / len(train_loader)
-        print(f"Epoch {epoch+1}, Loss: {avg_loss:.4f}")
-
         # Check for collapse once per epoch
-        with torch.no_grad():
-            mean_var = check_for_collapse(pred_encs)
+        if batch_counter % 100 == 0:
+            with torch.no_grad():
+                mean_var = check_for_collapse(pred_encs)
+            avg_loss = total_loss / len(train_loader)
+            print(f"Epoch {epoch + 1}, Loss: {avg_loss:.4f}")
 
         # Save model every 5 epochs
         if (epoch + 1) % 5 == 0:
