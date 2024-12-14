@@ -47,7 +47,7 @@ def load_model():
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = RecurrentJEPA(state_dim=128, action_dim=2, hidden_dim=128, ema_rate=0.99).to(device)
 
-    model_path = "checkpoints/epoch_1_jepa.pth"
+    model_path = "checkpoints/epoch_0_jepa.pth"
     state_dict = torch.load(model_path, map_location=device)
     model.load_state_dict(state_dict)
     model.to("cuda")
