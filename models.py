@@ -137,11 +137,12 @@ class RecurrentJEPA(nn.Module):
 
     @torch.no_grad()
     def encode_target(self, states):
-        B, T, C, H, W = states.shape
-        flat = states.view(B * T, C, H, W)
-        enc = self.target_encoder(flat)
-        proj = self.target_projection(enc)
-        proj = proj.view(B, T, -1)
+        # Ensure states shape: [B, T, C, H, W]
+        B, T, C, H, W = states.shape  # Extract dimensions
+        flat = states.view(B * T, C, H, W)  # Flatten batch and time
+        enc = self.target_encoder(flat)  # Encoder output: [B*T, D]
+        enc = enc.view(B, T, -1)  # Restore time dimension: [B, T, D]
+        proj = self.target_projection(enc)  # Pass to projection: [B, T, proj_dim]
         return proj
 
     def encode_online(self, states):
