@@ -6,18 +6,18 @@ import torch
 from copy import deepcopy
 
 # VICReg Loss Function
-def compute_vicreg_loss(online_pred, target_proj, lambda_var=1.0, lambda_cov=1.0):
+def compute_vicreg_loss(online_pred, target_proj, lambda_var=1.0, lambda_cov=1.0, eps=1e-7):
     # Center the predictions
     o_norm = online_pred - online_pred.mean(dim=0)
     t_norm = target_proj - target_proj.mean(dim=0)
 
-    # Variance Loss
-    var_loss = (torch.relu(1 - o_norm.var(dim=0).sqrt()).sum() +
-                torch.relu(1 - t_norm.var(dim=0).sqrt()).sum())
+    # Variance Loss with numerical stability
+    var_loss = (torch.relu(1 - torch.sqrt(o_norm.var(dim=0) + eps)).sum() +
+                torch.relu(1 - torch.sqrt(t_norm.var(dim=0) + eps)).sum())
 
     # Covariance Loss
-    o_cov = (o_norm.T @ o_norm) / (o_norm.size(0) - 1)
-    t_cov = (t_norm.T @ t_norm) / (t_norm.size(0) - 1)
+    o_cov = (o_norm.T @ o_norm) / (o_norm.size(0) - 1 + eps)
+    t_cov = (t_norm.T @ t_norm) / (t_norm.size(0) - 1 + eps)
     cov_loss = ((o_cov ** 2).sum() - torch.diagonal(o_cov, 0).pow(2).sum() +
                 (t_cov ** 2).sum() - torch.diagonal(t_cov, 0).pow(2).sum())
 
@@ -66,27 +66,21 @@ class TransitionModel(nn.Module):
 class Projection(nn.Module):
     def __init__(self, emb_dim=128, proj_dim=128, num_heads=4):
         super().__init__()
-        self.fc1 = nn.Sequential(
-            nn.Linear(emb_dim, emb_dim),
-            nn.BatchNorm1d(emb_dim),
-            nn.ReLU()
-        )
-        self.attention = nn.MultiheadAttention(embed_dim=emb_dim, num_heads=num_heads, batch_first=True)
-        self.fc2 = nn.Sequential(
+        self.fc = nn.Sequential(
             nn.Linear(emb_dim, emb_dim),
             nn.BatchNorm1d(emb_dim),
             nn.ReLU(),
-            nn.Linear(emb_dim, proj_dim)
+            nn.MultiheadAttention(embed_dim=emb_dim, num_heads=num_heads, batch_first=True),
+            nn.Linear(emb_dim, proj_dim),
+            nn.BatchNorm1d(proj_dim),
+            nn.ReLU()
         )
 
     def forward(self, x):
-        B, T, D = x.size()  # Input shape: [B, T, D]
-        attn_output, _ = self.attention(x, x, x)  # Self-attention
-        x = x + attn_output  # Residual connection
-        x = x.view(-1, D)  # Flatten for processing
-        x = self.fc1(x)
-        x = self.fc2(x)
-        return x.view(B, T, -1)  # Restore shape
+        B, T, D = x.shape
+        x = x.view(-1, D)
+        x = self.fc(x)
+        return x.view(B, T, -1)
 
 class Predictor(nn.Module):
     def __init__(self, emb_dim=128, hidden_dim=512):
@@ -154,19 +148,25 @@ class RecurrentJEPA(nn.Module):
         B, T, C, H, W = states.shape
         flat = states.view(B * T, C, H, W)
         enc = self.online_encoder(flat)
-        proj = self.online_projection(enc)
         enc = enc.view(B, T, -1)
-        proj = proj.view(B, T, -1)
+        proj = self.online_projection(enc)
         return enc, proj
 
-    def compute_byol_loss(self, online_pred, target_proj):
-        o_norm = F.normalize(online_pred, dim=-1)
-        t_norm = F.normalize(target_proj, dim=-1)
-        byol_loss = 2 - 2 * (o_norm * t_norm).sum(dim=-1).mean()
+    def compute_byol_loss(self, online_pred, target_proj,
+                          lambda_byol=1.0,
+                          lambda_vicreg=1.0,
+                          temperature=0.5):
+        # Normalize predictions
+        online_pred = F.normalize(online_pred, dim=-1)
+        target_proj = F.normalize(target_proj, dim=-1)
 
-        # Add VICReg loss
+        # BYOL-style loss with temperature
+        byol_loss = 2 - 2 * (online_pred * target_proj).sum(dim=-1).mean() / temperature
+
+        # VICReg loss for additional regularization
         vicreg_loss = compute_vicreg_loss(online_pred, target_proj)
-        return byol_loss + vicreg_loss
+
+        return lambda_byol * byol_loss + lambda_vicreg * vicreg_loss
 
     def update_target_network(self):
         self._update_target_network(initial=False)
