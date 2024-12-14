@@ -176,3 +176,12 @@ class Prober(torch.nn.Module):
     def forward(self, e):
         output = self.prober(e)
         return output
+def build_mlp(layers_dims: List[int]):
+    layers = []
+    for i in range(len(layers_dims) - 2):
+        layers.append(nn.Linear(layers_dims[i], layers_dims[i + 1]))
+        layers.append(nn.BatchNorm1d(layers_dims[i + 1]))
+        layers.append(nn.ReLU(True))
+    layers.append(nn.Linear(layers_dims[-2], layers_dims[-1]))
+    return nn.Sequential(*layers)
+
